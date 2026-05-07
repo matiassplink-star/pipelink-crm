@@ -126,6 +126,8 @@ export default function ClientDetailsModal({ dealId, isOpen, onClose, onRefresh 
     if (!scheduledMsg.text || !scheduledMsg.date || !scheduledMsg.time) return;
 
     try {
+      const scheduled_for = new Date(`${scheduledMsg.date}T${scheduledMsg.time}`).toISOString();
+
       const msgData: any = {
         deal_id: dealId,
         message_text: scheduledMsg.text,
