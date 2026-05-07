@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Users, 
@@ -27,6 +28,8 @@ import ReportsView from '@/components/ReportsView';
 type View = 'dashboard' | 'clients' | 'funnel' | 'agenda' | 'automation' | 'settings' | 'reports';
 
 export default function Home() {
+  const router = useRouter();
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [boardView, setBoardView] = useState<'kanban' | 'list'>('kanban');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,9 +51,44 @@ export default function Home() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   useEffect(() => {
-    fetchStats();
-    fetchDeals();
-  }, [refreshKey]);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+      } else {
+        setIsLoadingAuth(false);
+      }
+    };
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push('/login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      fetchStats();
+      fetchDeals();
+    }
+  }, [refreshKey, isLoadingAuth]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const fetchDeals = async () => {
     const { data } = await supabase
@@ -294,7 +332,7 @@ export default function Home() {
             <Settings size={20} />
             <span>Configurações</span>
           </button>
-          <button className="sidebar-item w-full text-red-600 hover:bg-red-50 hover:text-red-700">
+          <button onClick={handleLogout} className="sidebar-item w-full text-red-600 hover:bg-red-50 hover:text-red-700">
             <LogOut size={20} />
             <span>Sair</span>
           </button>
